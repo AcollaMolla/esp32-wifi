@@ -22,7 +22,6 @@ static const char *TAG_SCAN = "wifi-scan";
 static const char *TAG_LED = "led";
 static const char *TAG_DEAUTH = "wifi-deauth";
 static const char *TAG_BEACON = "wifi-beacon";
-static const char *beacon_frame_ssid = "ESP32";
 static uint8_t s_led_state = 0;
 static bool wifi_driver_configured = false;
 
@@ -49,6 +48,17 @@ static uint8_t beacon_raw[] = {
 	0x03, 0x01, 0x01,						// 49-51: DS Parameter set, current channel 1 (= 0x01),
 	0x05, 0x04, 0x01, 0x02, 0x00, 0x00,				// 52-57: Traffic Indication Map
 	
+};
+
+char *rick_ssids[] = {
+	"01 Never gonna give you up",
+	"02 Never gonna let you down",
+	"03 Never gonna run around",
+	"04 and desert you",
+	"05 Never gonna make you cry",
+	"06 Never gonna say goodbye",
+	"07 Never gonna tell a lie",
+	"08 and hurt you"
 };
 
 esp_err_t event_handler(void *ctx, system_event_t *event){
@@ -83,20 +93,22 @@ static void wifi_send_deauth(wifi_ap_record_t ap_info){
 }
 
 void wifi_send_beacon(void *pvParameters){
+	uint8_t line = 0;
 	while(true){
 		blink_led();
 		vTaskDelay(250/portTICK_PERIOD_MS);
 		uint8_t beacon_rick[200];
 		memcpy(beacon_rick, beacon_raw, BEACON_SSID_OFFSET - 1);
-		beacon_rick[BEACON_SSID_OFFSET - 1] = strlen(beacon_frame_ssid);
-		memcpy(&beacon_rick[BEACON_SSID_OFFSET], beacon_frame_ssid, strlen(beacon_frame_ssid));
-		memcpy(&beacon_rick[BEACON_SSID_OFFSET + strlen(beacon_frame_ssid)], &beacon_raw[BEACON_SSID_OFFSET], sizeof(beacon_raw) - BEACON_SSID_OFFSET);
+		beacon_rick[BEACON_SSID_OFFSET - 1] = strlen(rick_ssids[line]);
+		memcpy(&beacon_rick[BEACON_SSID_OFFSET], rick_ssids[line], strlen(rick_ssids[line]));
+		memcpy(&beacon_rick[BEACON_SSID_OFFSET + strlen(rick_ssids[line])], &beacon_raw[BEACON_SSID_OFFSET], sizeof(beacon_raw) - BEACON_SSID_OFFSET);
 
 		ESP_LOGI(TAG_BEACON, "beacon_rick size %d\n", sizeof(beacon_rick));
 		ESP_LOGI(TAG_BEACON, "frame len %d\n", sizeof(beacon_raw));
-		ESP_LOGI(TAG_BEACON, "ssid len bytes %d\n", sizeof(beacon_frame_ssid));
-		ESP_LOGI(TAG_BEACON, "ssid len %d\n", strlen(beacon_frame_ssid));
-		esp_wifi_80211_tx(ESP_IF_WIFI_AP, beacon_rick, sizeof(beacon_raw) + strlen(beacon_frame_ssid), false);
+		ESP_LOGI(TAG_BEACON, "ssid len bytes %d\n", sizeof(rick_ssids[line]));
+		ESP_LOGI(TAG_BEACON, "ssid len %d\n", strlen(rick_ssids[line]));
+		esp_wifi_80211_tx(ESP_IF_WIFI_AP, beacon_rick, sizeof(beacon_raw) + strlen(rick_ssids[line]), false);
+		line++;
 	}
 }
 
@@ -150,5 +162,5 @@ void app_main(void) {
 	ESP_ERROR_CHECK(esp_wifi_start());
 	ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
 	configure_led();
-	xTaskCreate(&wifi_send_beacon, "wifi_send_beacon", 2048, NULL, 5, NULL);
+	xTaskCreate(&wifi_send_beacon, "wifi_send_beacon", 4096, NULL, 5, NULL);
 }
